@@ -10,25 +10,37 @@ class CPU:
         """Construct a new CPU."""
         self.register = [0] * 8  # make 8 registers
         self.pc = 0  # program counter
-        self.ir = 0  # Instruction Register, contains a copy of the currently executing instruction
+        self.IR = 0  # Instruction Register, contains a copy of the currently executing instruction
         self.ram = [0] * 256
 
-    def load(self):
+    def load(self, file_name):
         """Load a program into memory."""
 
         address = 0
 
-        # For now, we've just hardcoded a program:
+        program = []
 
-        program = [
-            # From print8.ls8
-            0b10000010,  # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111,  # PRN R0
-            0b00000000,
-            0b00000001,  # HLT
-        ]
+        if file_name is None:
+            print("This file is bad.")  # for stretch
+            sys.exit(1)
+        try:
+            with open(file_name, 'r') as f:
+                print("Inside the file")
+                for line in f:
+                    # Process comments:
+                    # Ignore anything after a # symbol
+                    comment_split = line.split("#")
+                    # Convert any numbers from binary strings to integers
+                    num = comment_split[0]
+                    try:
+                        x = int(num, 2)
+                    except ValueError:
+                        continue
+                    # print in binary and decimal
+                    print(f"{x:08b}: {x:d}")
+                    program.append(x)
+        except ValueError:
+            print(f"File not found")
 
         for instruction in program:
             self.ram[address] = instruction
@@ -66,37 +78,46 @@ class CPU:
     def run(self):
         """Run the CPU."""
         running = True
+        LDI = 0b10000010
+        PRN = 0b01000111
+        HLT = 0b00000001
+        MUL = 0b10100010
 
         while running:
-            print("running...")
 
-            command = self.ram[self.pc]
+            IR = self.ram[self.pc]
 
-            if command == 0b10000010:  # LDI
+            if IR == LDI:  # LDI
                 num = self.ram[self.pc + 1]
                 reg = self.ram[self.pc + 2]
 
-                self.register[reg] = num
+                self.register[num] = reg
                 self.pc += 3
 
-            elif command == 0b01000111:  # PRN
+            elif IR == PRN:  # PRN
                 reg = self.ram[self.pc + 1]
                 print(self.register[reg])
                 self.pc += 2
 
-            elif command == 0b00000001:  # HLT
+            elif IR == HLT:  # HLT
                 running = False
-                pc += 1
+                self.pc += 1
+
+            elif IR == MUL:  # MUL
+                reg_a = self.ram[self.pc + 1]
+                reg_b = self.ram[self.pc + 2]
+                self.register[reg_a] *= self.register[reg_b]
+                self.pc += 3
 
             else:
-                print(f"Unknown command: {command}")
+                print(f"Unknown IR: {IR}")
                 sys.exit(1)
 
-    def ram_read(self, location):
+    def ram_read(self, MAR):
         # Read from RAM
         # Accepts the address to read and return the value stored there
-        return self.ram[location]
+        return self.ram[MAR]
 
     # accept a value to write, and the addres to write it to
-    def ram_write(self, location, value):
-        self.ram[location] = value
+    def ram_write(self, MAR, MDR):
+        self.ram[MAR] = MDR
