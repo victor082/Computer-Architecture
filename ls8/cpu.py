@@ -8,7 +8,10 @@ class CPU:
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.register = [0] * 8  # make 8 registers
+        self.pc = 0  # program counter
+        self.ir = 0  # Instruction Register, contains a copy of the currently executing instruction
+        self.ram = [0] * 256
 
     def load(self):
         """Load a program into memory."""
@@ -35,7 +38,7 @@ class CPU:
         """ALU operations."""
 
         if op == "ADD":
-            self.reg[reg_a] += self.reg[reg_b]
+            self.register[reg_a] += self.register[reg_b]
         # elif op == "SUB": etc
         else:
             raise Exception("Unsupported ALU operation")
@@ -62,4 +65,38 @@ class CPU:
 
     def run(self):
         """Run the CPU."""
-        pass
+        running = True
+
+        while running:
+            print("running...")
+
+            command = self.ram[self.pc]
+
+            if command == 0b10000010:  # LDI
+                num = self.ram[self.pc + 1]
+                reg = self.ram[self.pc + 2]
+
+                self.register[reg] = num
+                self.pc += 3
+
+            elif command == 0b01000111:  # PRN
+                reg = self.ram[self.pc + 1]
+                print(self.register[reg])
+                self.pc += 2
+
+            elif command == 0b00000001:  # HLT
+                running = False
+                pc += 1
+
+            else:
+                print(f"Unknown command: {command}")
+                sys.exit(1)
+
+    def ram_read(self, location):
+        # Read from RAM
+        # Accepts the address to read and return the value stored there
+        return self.ram[location]
+
+    # accept a value to write, and the addres to write it to
+    def ram_write(self, location, value):
+        self.ram[location] = value
