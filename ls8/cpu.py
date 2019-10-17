@@ -12,6 +12,7 @@ class CPU:
         self.pc = 0  # program counter
         self.IR = 0  # Instruction Register, contains a copy of the currently executing instruction
         self.ram = [0] * 256
+        self.SP = 7
 
     def load(self, file_name):
         """Load a program into memory."""
@@ -51,7 +52,11 @@ class CPU:
 
         if op == "ADD":
             self.register[reg_a] += self.register[reg_b]
-        # elif op == "SUB": etc
+
+        elif op == MUL:  # MUL
+            self.register[reg_a] *= self.register[reg_b]
+            self.pc += 3
+
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -82,6 +87,8 @@ class CPU:
         PRN = 0b01000111
         HLT = 0b00000001
         MUL = 0b10100010
+        PUSH = 0b01000101
+        POP = 0b01000110
 
         while running:
 
@@ -103,11 +110,23 @@ class CPU:
                 running = False
                 self.pc += 1
 
-            elif IR == MUL:  # MUL
-                reg_a = self.ram[self.pc + 1]
-                reg_b = self.ram[self.pc + 2]
-                self.register[reg_a] *= self.register[reg_b]
-                self.pc += 3
+            elif IR == PUSH:
+                reg = self.ram[self.pc + 1]
+                val = self.register[reg]
+                #  Got to decrement the Stack pointer.
+                self.register[self.SP] -= 1
+                # Copy the value in the given register to the address pointed to by Stack pointer
+                self.ram[self.register[self.SP]] = val
+                self.pc += 2
+
+            elif IR == POP:
+                reg = self.ram[self.pc + 1]
+                val = self.ram[self.register[self.SP]]
+                # Copy the value from the address pointed to by Stack pointer to the given register
+                self.register[reg] = val
+                # Increment SP
+                self.register[self.SP] += 1
+                self.pc += 2
 
             else:
                 print(f"Unknown IR: {IR}")
