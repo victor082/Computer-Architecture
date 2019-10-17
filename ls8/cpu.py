@@ -13,6 +13,15 @@ class CPU:
         self.IR = 0  # Instruction Register, contains a copy of the currently executing instruction
         self.ram = [0] * 256
         self.SP = 7
+        self.opcodes = {'LDI': 0b10000010,
+                        'PRN': 0b01000111,
+                        'HLT': 0b00000001,
+                        'MUL': 0b10100010,
+                        'PUSH': 0b01000101,
+                        'POP': 0b01000110,
+                        'CALL': 0b01010000,
+                        'RET': 0b00010001,
+                        'ADD': 0b10100000}
 
     def load(self, file_name):
         """Load a program into memory."""
@@ -50,10 +59,11 @@ class CPU:
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
 
-        if op == "ADD":
+        if op == self.opcodes['ADD']:
             self.register[reg_a] += self.register[reg_b]
+            self.pc += 3
 
-        elif op == MUL:  # MUL
+        elif op == self.opcodes['MUL']:  # MUL
             self.register[reg_a] *= self.register[reg_b]
             self.pc += 3
 
@@ -83,34 +93,28 @@ class CPU:
     def run(self):
         """Run the CPU."""
         running = True
-        LDI = 0b10000010
-        PRN = 0b01000111
-        HLT = 0b00000001
-        MUL = 0b10100010
-        PUSH = 0b01000101
-        POP = 0b01000110
 
         while running:
 
             IR = self.ram[self.pc]
 
-            if IR == LDI:  # LDI
+            if IR == self.opcodes['LDI']:  # LDI
                 num = self.ram[self.pc + 1]
                 reg = self.ram[self.pc + 2]
 
                 self.register[num] = reg
                 self.pc += 3
 
-            elif IR == PRN:  # PRN
+            elif IR == self.opcodes['PRN']:  # PRN
                 reg = self.ram[self.pc + 1]
                 print(self.register[reg])
                 self.pc += 2
 
-            elif IR == HLT:  # HLT
+            elif IR == self.opcodes['HLT']:  # HLT
                 running = False
                 self.pc += 1
 
-            elif IR == PUSH:
+            elif IR == self.opcodes['PUSH']:
                 reg = self.ram[self.pc + 1]
                 val = self.register[reg]
                 #  Got to decrement the Stack pointer.
@@ -119,7 +123,7 @@ class CPU:
                 self.ram[self.register[self.SP]] = val
                 self.pc += 2
 
-            elif IR == POP:
+            elif IR == self.opcodes['POP']:
                 reg = self.ram[self.pc + 1]
                 val = self.ram[self.register[self.SP]]
                 # Copy the value from the address pointed to by Stack pointer to the given register
@@ -127,6 +131,27 @@ class CPU:
                 # Increment SP
                 self.register[self.SP] += 1
                 self.pc += 2
+
+            elif IR == self.opcodes['CALL']:
+                # we want to push the return address on the stack
+                self.register[self.SP] -= 1  # the stack push
+                self.ram[self.register[self.SP]] = self.pc + 2
+
+                # The program counter is set to the address stored in the given register
+                reg = self.ram[self.pc + 1]
+                # We then jump to that location in the RAM and execute the first instruction
+                self.pc = self.register[reg]
+
+            elif IR == self.opcodes['RET']:
+                # return the subroutine
+                self.pc = self.ram[self.register[self.SP]]
+                # pop the value from the top of the stack
+                self.register[self.SP] += 1
+
+            elif IR == self.opcodes['ADD']:
+                reg_a = self.ram[self.pc + 1]
+                reg_b = self.ram[self.pc + 2]
+                self.alu(IR, reg_a, reg_b)
 
             else:
                 print(f"Unknown IR: {IR}")
